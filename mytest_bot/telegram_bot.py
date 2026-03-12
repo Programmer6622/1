@@ -17,9 +17,6 @@ except Exception:
 if load_dotenv:
     load_dotenv()
 
-from .converter import convert_file_with_report, extract_raw_text
-from .errors import ConversionError
-
 
 MAX_FILE_MB = int(os.environ.get("MAX_FILE_MB", "20"))
 EXPORT_RAW_TEXT = os.environ.get("EXPORT_RAW_TEXT", "0").strip().lower() in {
@@ -188,11 +185,24 @@ def main() -> None:
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     if not token:
         raise SystemExit("TELEGRAM_BOT_TOKEN is not set.")
+    webhook_flag = os.environ.get("WEBHOOK", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
     webhook_url = os.environ.get("WEBHOOK_URL", "").strip()
+    if not webhook_url and webhook_flag:
+        webhook_url = os.environ.get("RENDER_EXTERNAL_URL", "").strip()
     webhook_secret = os.environ.get("WEBHOOK_SECRET", "").strip() or None
     listen_host = os.environ.get("WEBHOOK_LISTEN", "0.0.0.0").strip()
     port = int(os.environ.get("PORT", os.environ.get("WEBHOOK_PORT", "10000")))
     url_path = os.environ.get("WEBHOOK_PATH", token).strip()
+    if webhook_flag and not webhook_url:
+        raise SystemExit(
+            "WEBHOOK is enabled but WEBHOOK_URL is not set "
+            "(or RENDER_EXTERNAL_URL is missing)."
+        )
     webhook_url_full = webhook_url
     if webhook_url:
         suffix = f"/{url_path}"
