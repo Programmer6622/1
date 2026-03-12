@@ -2,6 +2,7 @@ import logging
 import os
 import tempfile
 from pathlib import Path
+from urllib.parse import urlparse
 
 from telegram import InputFile, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
@@ -208,16 +209,21 @@ def main() -> None:
     listen_host = os.environ.get("WEBHOOK_LISTEN", "0.0.0.0").strip()
     port = int(os.environ.get("PORT", os.environ.get("WEBHOOK_PORT", "10000")))
     url_path = os.environ.get("WEBHOOK_PATH", "telegram/webhook").strip()
+    if url_path.startswith("http://") or url_path.startswith("https://"):
+        parsed_path = urlparse(url_path).path.strip("/")
+        url_path = parsed_path or "telegram/webhook"
+    url_path = url_path.lstrip("/")
     if use_webhook and not webhook_url:
         raise SystemExit(
             "Webhook mode is enabled but WEBHOOK_URL is not set "
             "(or RENDER_EXTERNAL_URL is missing)."
         )
-    webhook_url_full = webhook_url
+    webhook_url_full = webhook_url.rstrip("/")
     if webhook_url:
-        suffix = f"/{url_path}"
-        if not webhook_url.rstrip("/").endswith(suffix):
-            webhook_url_full = f"{webhook_url.rstrip('/')}{suffix}"
+        parsed_webhook = urlparse(webhook_url)
+        has_path = bool(parsed_webhook.path and parsed_webhook.path.strip("/"))
+        if not has_path:
+            webhook_url_full = f"{webhook_url_full}/{url_path}"
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     app = Application.builder().token(token).build()
