@@ -191,16 +191,26 @@ def main() -> None:
         "yes",
         "on",
     }
+    force_polling = os.environ.get("FORCE_POLLING", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    render_external_url = os.environ.get("RENDER_EXTERNAL_URL", "").strip()
     webhook_url = os.environ.get("WEBHOOK_URL", "").strip()
-    if not webhook_url and webhook_flag:
-        webhook_url = os.environ.get("RENDER_EXTERNAL_URL", "").strip()
+    use_webhook = not force_polling and (
+        webhook_flag or bool(webhook_url) or bool(render_external_url)
+    )
+    if not webhook_url and use_webhook:
+        webhook_url = render_external_url
     webhook_secret = os.environ.get("WEBHOOK_SECRET", "").strip() or None
     listen_host = os.environ.get("WEBHOOK_LISTEN", "0.0.0.0").strip()
     port = int(os.environ.get("PORT", os.environ.get("WEBHOOK_PORT", "10000")))
-    url_path = os.environ.get("WEBHOOK_PATH", token).strip()
-    if webhook_flag and not webhook_url:
+    url_path = os.environ.get("WEBHOOK_PATH", "telegram/webhook").strip()
+    if use_webhook and not webhook_url:
         raise SystemExit(
-            "WEBHOOK is enabled but WEBHOOK_URL is not set "
+            "Webhook mode is enabled but WEBHOOK_URL is not set "
             "(or RENDER_EXTERNAL_URL is missing)."
         )
     webhook_url_full = webhook_url
@@ -214,7 +224,8 @@ def main() -> None:
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("batch", handle_batch))
     app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
-    if webhook_url:
+    if use_webhook:
+        logging.info("Starting in webhook mode: %s", webhook_url_full)
         app.run_webhook(
             listen=listen_host,
             port=port,
@@ -224,6 +235,7 @@ def main() -> None:
             drop_pending_updates=True,
         )
     else:
+        logging.info("Starting in polling mode")
         app.run_polling(drop_pending_updates=True)
 
 
