@@ -1,0 +1,19 @@
+1) Capital of France?
+A) Paris
+B) Rome
+C) Berlin
+D) Madrid
+
+2) 5 * 3 = ?
+A) 10
+B) 12
+C) 15
+D) 20
+
+3) Choose the color of the sky on a clear day.
+A) Green
+B) Blue
+C) Red
+D) Yellow
+
+Answer key (unusual): Q1=B; Q2=C; Q3=B
